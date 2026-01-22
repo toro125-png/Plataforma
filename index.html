@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A.F.D.sistemas-ec | Professional Tech Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --tech-blue: #00d2ff; --neon-green: #39ff14; --dark-space: #020617; --glass: rgba(15, 23, 42, 0.75); }
+        body { background-color: var(--dark-space); color: #e2e8f0; font-family: 'Rajdhani', sans-serif; overflow-x: hidden; scroll-behavior: smooth; }
+        .orbitron { font-family: 'Orbitron', sans-serif; }
+        #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; filter: hue-rotate(180deg) brightness(0.4); }
+        .glass { background: var(--glass); backdrop-filter: blur(15px); border: 1px solid rgba(0, 210, 255, 0.2); }
+        .neon-border-blue { border-bottom: 2px solid var(--tech-blue); box-shadow: 0 4px 15px -5px var(--tech-blue); }
+        .product-card { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 1px solid rgba(57, 255, 20, 0.1); }
+        .product-card:hover { transform: translateY(-10px); border-color: var(--neon-green); box-shadow: 0 0 20px rgba(57, 255, 20, 0.2); }
+        .scan-line { width: 100%; height: 2px; background: var(--neon-green); position: absolute; top: 0; left: 0; animation: scan 4s linear infinite; opacity: 0.15; pointer-events: none; }
+        @keyframes scan { from { top: 0% } to { top: 100% } }
+        .admin-control { display: none !important; }
+        body.edit-mode .admin-control { display: flex !important; }
+        body.edit-mode .admin-block { display: block !important; }
+        .editable-active { outline: 1px dashed var(--neon-green); background: rgba(57, 255, 20, 0.05); }
+        .ws-float { position: fixed; bottom: 30px; right: 30px; z-index: 100; background: #25d366; color: white; padding: 15px; border-radius: 50%; box-shadow: 0 0 20px rgba(37, 211, 102, 0.4); transition: transform 0.3s; }
+        .ws-float:hover { transform: scale(1.1) rotate(10deg); }
+        .category-badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; background: rgba(0, 210, 255, 0.1); border: 1px solid var(--tech-blue); color: var(--tech-blue); text-transform: uppercase; }
+    </style>
+</head>
+<body class="view-mode">
+
+    <div id="canvas-container"></div>
+
+    <nav class="fixed w-full z-50 glass py-3 px-6 flex justify-between items-center neon-border-blue">
+        <div class="flex items-center gap-3">
+            <i data-lucide="shield-check" class="text-blue-400 w-8 h-8"></i>
+            <span class="orbitron text-xl font-bold tracking-tighter text-white editable" id="nav-brand">A.F.D.sistemas-ec</span>
+        </div>
+        
+        <div class="flex gap-4 items-center">
+            <div class="relative hidden md:block">
+                <input type="text" id="globalSearch" onkeyup="filterProducts()" placeholder="Buscar en el sistema..." class="bg-slate-900/80 border border-blue-500/30 rounded-full px-4 py-1 text-xs orbitron focus:outline-none focus:border-green-400 w-64 text-white">
+                <i data-lucide="search" class="absolute right-3 top-1.5 w-4 h-4 text-blue-400"></i>
+            </div>
+            <button onclick="toggleLoginModal()" id="login-trigger" class="orbitron text-[10px] font-bold px-4 py-2 rounded border border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white transition-all">INICIAR SESIÓN ADMINISTRADOR</button>
+            <div id="admin-nav" class="admin-control flex gap-2">
+                <button onclick="saveSession()" class="bg-green-600 text-white px-3 py-2 rounded text-[10px] font-bold orbitron">SINCRONIZAR</button>
+                <button onclick="exitAdmin()" class="bg-red-600 text-white px-3 py-2 rounded text-[10px] font-bold orbitron">SALIR</button>
+            </div>
+        </div>
+    </nav>
+
+    <header class="h-screen flex flex-col items-center justify-center text-center px-4 relative">
+        <div class="scan-line"></div>
+        <h1 class="orbitron text-5xl md:text-8xl font-black mb-4 text-white uppercase">
+            <span class="editable" id="hero-1">Soluciones</span> <br>
+            <span class="text-blue-400 editable" id="hero-2">Tecnológicas</span>
+        </h1>
+        <p class="text-lg md:text-2xl text-blue-200/60 max-w-3xl editable" id="hero-sub">Especialistas en Impresión EPSON, Servicio Técnico y Repuestos de Grado Industrial.</p>
+        <div class="mt-10 flex gap-4">
+            <a href="#productos" class="glass border border-blue-500 text-blue-400 px-8 py-3 orbitron text-xs hover:bg-blue-500/20 transition-all">CATÁLOGO</a>
+            <a href="#sucursales" class="bg-blue-600 text-white px-8 py-3 orbitron text-xs hover:bg-blue-500 transition-all">UBICACIÓN</a>
+        </div>
+    </header>
+
+    <section id="productos" class="py-24 px-6 container mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+            <div>
+                <h2 class="orbitron text-4xl font-bold text-white"><span class="text-green-400">01.</span> INVENTARIO</h2>
+                <div class="flex gap-4 mt-4">
+                    <button onclick="filterByCategory('all')" class="text-[10px] orbitron border border-slate-700 px-3 py-1 rounded hover:border-blue-500">TODO</button>
+                    <button onclick="filterByCategory('Impresoras')" class="text-[10px] orbitron border border-slate-700 px-3 py-1 rounded hover:border-blue-500">IMPRESORAS</button>
+                    <button onclick="filterByCategory('Aparatos para servicio técnico')" class="text-[10px] orbitron border border-slate-700 px-3 py-1 rounded hover:border-blue-500">SERVICIO</button>
+                    <button onclick="filterByCategory('Repuestos')" class="text-[10px] orbitron border border-slate-700 px-3 py-1 rounded hover:border-blue-500">REPUESTOS</button>
+                </div>
+            </div>
+            <button onclick="openProductModal()" class="admin-control bg-blue-600 hover:bg-blue-400 text-white orbitron text-xs px-6 py-3 rounded-lg flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> NUEVO PRODUCTO
+            </button>
+        <ejecur/div>
+
+        <div id="product-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            </div>
+    </section>
+
+    <section id="sucursales" class="py-24 px-6 bg-black/40">
+        <div class="container mx-auto">
+            <div class="flex justify-between items-center mb-12">
+                <h2 class="orbitron text-4xl font-bold"><span class="text-green-400">02.</span> SUCURSALES</h2>
+                <button onclick="addBranch()" class="admin-control bg-green-600 text-white orbitron text-xs px-6 py-2 rounded">AGREGAR SEDE</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                <div id="branch-list" class="space-y-6">
+                    </div>
+                <div class="lg:col-span-2 glass rounded-3xl overflow-hidden min-h-[450px] border border-blue-900/50 relative">
+                    <div id="map-placeholder" class="absolute inset-0 flex items-center justify-center text-center text-blue-400 orbitron text-lg hidden">
+                        Seleccione una sede para ver el mapa
+                    </div>
+                    <iframe id="map-frame" width="100%" height="100%" frameborder="0" style="border:0; filter: invert(90%) hue-rotate(180deg) contrast(1.2);" allowfullscreen class="hidden"></iframe>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-16 text-center border-t border-blue-900/30">
+        <div class="orbitron text-[10px] tracking-[0.5em] text-slate-500 mb-4">A.F.D.SISTEMAS-EC // PROTOCOLO 2026</div>
+        <div class="flex justify-center gap-6">
+            <i data-lucide="instagram" class="w-5 h-5 text-slate-400 hover:text-blue-400 cursor-pointer"></i>
+            <i data-lucide="facebook" class="w-5 h-5 text-slate-400 hover:text-blue-400 cursor-pointer"></i>
+            <i data-lucide="twitter" class="w-5 h-5 text-slate-400 hover:text-blue-400 cursor-pointer"></i>
+        </div>
+    </footer>
+
+    <a href="https://wa.me/593992835549" target="_blank" class="ws-float">
+        <i data-lucide="message-circle" class="w-8 h-8"></i>
+    </a>
+
+    <div id="modal-login" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center p-6">
+        <div class="glass p-10 rounded-3xl border-2 border-blue-500/40 w-full max-w-md">
+            <div id="step-login">
+                <h3 class="orbitron text-2xl text-blue-400 mb-8 text-center tracking-widest">ACCESO CENTRAL</h3>
+                <input type="text" id="user" placeholder="USUARIO" class="w-full bg-slate-900 border border-blue-500/20 p-4 rounded-xl mb-4 orbitron text-xs text-white focus:border-blue-500 outline-none">
+                <input type="password" id="pass" placeholder="PASSWORD" class="w-full bg-slate-900 border border-blue-500/20 p-4 rounded-xl mb-8 orbitron text-xs text-white focus:border-blue-500 outline-none">
+                <button onclick="attemptLogin()" class="w-full bg-blue-600 py-4 rounded-xl orbitron font-bold hover:bg-blue-400 transition-all shadow-lg shadow-blue-500/20">AUTENTICAR</button>
+            </div>
+            <div id="step-change" class="hidden">
+                <h3 class="orbitron text-xl text-yellow-400 mb-6 text-center">CAMBIO OBLIGATORIO</h3>
+                <p class="text-slate-400 text-xs mb-6 text-center">Por seguridad, actualice la clave inicial.</p>
+                <input type="password" id="new-pass" placeholder="NUEVA CONTRASEÑA" class="w-full bg-slate-900 border border-yellow-500/20 p-4 rounded-xl mb-6 orbitron text-xs text-white outline-none">
+                <button onclick="finalizePassChange()" class="w-full bg-yellow-600 py-4 rounded-xl orbitron font-bold text-black">ACTUALIZAR NÚCLEO</button>
+            </div>
+            <button onclick="toggleLoginModal()" class="w-full mt-6 text-slate-600 text-[10px] orbitron hover:text-white transition-colors">ABORTAR</button>
+        </div>
+    </div>
+
+    <div id="modal-product" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center p-6">
+        <div class="glass p-8 rounded-3xl border-2 border-green-500/40 w-full max-w-2xl">
+            <h3 class="orbitron text-xl text-green-400 mb-8">CONFIGURACIÓN DE PRODUCTO</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <input type="text" id="p-name" placeholder="Nombre" class="w-full bg-slate-900 border border-slate-700 p-3 rounded text-sm text-white">
+                    <select id="p-cat" class="w-full bg-slate-900 border border-slate-700 p-3 rounded text-sm text-white">
+                        <option value="Impresoras">Impresoras</option>
+                        <option value="Aparatos para servicio técnico">Aparatos para servicio técnico</option>
+                        <option value="Repuestos">Repuestos</option>
+                    </select>
+                    <input type="text" id="p-price" placeholder="Precio (Ej: 250.00)" class="w-full bg-slate-900 border border-slate-700 p-3 rounded text-sm text-white">
+                    <input type="text" id="p-img" placeholder="URL Imagen" class="w-full bg-slate-900 border border-slate-700 p-3 rounded text-sm text-white">
+                </div>
+                <textarea id="p-desc" placeholder="Descripción técnica..." class="w-full bg-slate-900 border border-slate-700 p-3 rounded text-sm text-white h-full min-h-[150px]"></textarea>
+            </div>
+            <div class="flex gap-4 mt-8">
+                <button onclick="saveProduct()" class="flex-1 bg-green-600 py-3 rounded orbitron text-xs font-bold">GUARDAR</button>
+                <button onclick="closeProductModal()" class="flex-1 bg-slate-800 py-3 rounded orbitron text-xs font-bold">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- MOTOR DE DATOS ---
+        let state = {
+            products: JSON.parse(localStorage.getItem('afd_p')) || [],
+            branches: JSON.parse(localStorage.getItem('afd_b')) || [],
+            admins: JSON.parse(localStorage.getItem('afd_admins')) || [{user: 'admin', pass: 'ADMIN2026', first: true}],
+            isEdit: false
+        };
+
+        // --- INICIALIZACIÓN ---
+        window.onload = () => {
+            renderProducts();
+            renderBranches();
+            loadGeneralText();
+            initThreeJS();
+            lucide.createIcons();
+        };
+
+        function initThreeJS() {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            const globe = new THREE.Mesh(
+                new THREE.SphereGeometry(2, 64, 64),
+                new THREE.MeshPhongMaterial({ color: 0x00d2ff, wireframe: true, transparent: true, opacity: 0.2 })
+            );
+            scene.add(globe);
+            const light = new THREE.PointLight(0x39ff14, 1.2);
+            light.position.set(5, 5, 5);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0x333333));
+            camera.position.z = 5;
+
+            function anim() {
+                requestAnimationFrame(anim);
+                globe.rotation.y += 0.0015;
+                globe.rotation.x += 0.0005;
+                renderer.render(scene, camera);
+            }
+            anim();
+        }
+
+        // --- GESTIÓN DE PRODUCTOS ---
+        function renderProducts(filter = '', cat = 'all') {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
+            
+            let filtered = state.products.filter(p => {
+                const matchSearch = p.name.toLowerCase().includes(filter.toLowerCase()) || p.desc.toLowerCase().includes(filter.toLowerCase());
+                const matchCat = cat === 'all' || p.cat === cat;
+                return matchSearch && matchCat;
+            });
+
+            filtered.forEach(p => {
+                grid.innerHTML += `
+                    <div class="product-card glass p-5 rounded-2xl flex flex-col group">
+                        <div class="h-44 bg-black/50 rounded-xl mb-4 overflow-hidden relative">
+                            <img src="${p.img}" class="w-full h-full object-cover opacity-70 group-hover:scale-110 transition-transform">
+                            <div class="admin-control absolute top-2 right-2 flex gap-1">
+                                <button onclick="deleteProduct('${p.id}')" class="bg-red-600/80 p-1.5 rounded-lg"><i data-lucide="trash-2" class="w-3 h-3 text-white"></i></button>
+                            </div>
+                        </div>
+                        <span class="category-badge mb-2 w-max">${p.cat}</span>
+                        <h3 class="orbitron text-lg font-bold text-white mb-2">${p.name}</h3>
+                        <p class="text-xs text-slate-400 mb-6 flex-grow line-clamp-3">${p.desc}</p>
+                        <div class="flex justify-between items-center border-t border-white/10 pt-4">
+                            <span class="text-green-400 font-bold orbitron">${p.price ? '$'+p.price : 'CONSULTAR'}</span>
+                            <i data-lucide="external-link" class="w-4 h-4 text-blue-500 cursor-pointer"></i>
+                        </div>
+                    </div>
+                `;
+            });
+            lucide.createIcons();
+        }
+
+        function filterProducts() {
+            renderProducts(document.getElementById('globalSearch').value);
+        }
+
+        function filterByCategory(c) {
+            renderProducts('', c);
+        }
+
+        function openProductModal() { document.getElementById('modal-product').classList.remove('hidden'); }
+        function closeProductModal() { document.getElementById('modal-product').classList.add('hidden'); }
+
+        function saveProduct() {
+            const newP = {
+                id: Date.now().toString(),
+                name: document.getElementById('p-name').value,
+                cat: document.getElementById('p-cat').value,
+                price: document.getElementById('p-price').value,
+                img: document.getElementById('p-img').value || 'https://via.placeholder.com/400x300/020617/00d2ff?text=AFD+SYSTEMS',
+                desc: document.getElementById('p-desc').value
+            };
+            if(!newP.name) return alert("Nombre requerido");
+            state.products.push(newP);
+            localStorage.setItem('afd_p', JSON.stringify(state.products));
+            renderProducts();
+            closeProductModal();
+        }
+
+        function deleteProduct(id) {
+            if(confirm('¿Eliminar producto?')) {
+                state.products = state.products.filter(p => p.id !== id);
+                localStorage.setItem('afd_p', JSON.stringify(state.products));
+                renderProducts();
+            }
+        }
+
+        // --- SUCURSALES ---
+        function renderBranches() {
+            const list = document.getElementById('branch-list');
+            list.innerHTML = '';
+            state.branches.forEach((b, i) => {
+                list.innerHTML += `
+                    <div onclick="setMap('${b.map}')" class="glass p-6 rounded-2xl border-l-4 border-blue-500 cursor-pointer hover:bg-blue-500/5 transition-all group relative">
+                        <div class="admin-control absolute top-2 right-2">
+                             <button onclick="deleteBranch(${i})" class="text-red-500"><i data-lucide="x-circle" class="w-4 h-4"></i></button>
+                        </div>
+                        <h4 class="orbitron text-sm font-bold text-blue-400 mb-2">${b.name}</h4>
+                        <div class="space-y-2 text-xs text-slate-400">
+                            <p class="flex items-center gap-2"><i data-lucide="map-pin" class="w-3 h-3 text-green-400"></i> ${b.addr}</p>
+                            <p class="flex items-center gap-2"><i data-lucide="clock" class="w-3 h-3 text-green-400"></i> ${b.hours}</p>
+                        </div>
+                        <div class="admin-control mt-4">
+                             <button onclick="editBranchMap(${i})" class="text-[10px] text-blue-500 underline">Editar URL Mapa</button>
+                        </div>
+                    </div>
+                `;
+            });
+            if(state.branches.length > 0 && state.branches[0].map && state.branches[0].map !== "/" && state.branches[0].map !== "") setMap(state.branches[0].map);
+            lucide.createIcons();
+        }
+
+        function addBranch() {
+            const type = prompt("Tipo de sede (1 → CD MATRIZ, 2 → SUCURSAL):");
+            if(type === '1' || type === '2') {
+                let name, addr, hours, map;
+                if(type === '1') {
+                    name = 'CD MATRIZ';
+                    addr = 'Av. Pedro Vicente Maldonado, Quito 170146';
+                    hours = 'Lunes a viernes: 9:00 a 17:30\nSábados: 9:30 a 16:00';
+                    map = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.797!2d-78.5!3d-0.2!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x91d59a0b0b0b0b%3A0x0!2zMC4y!5e0!3m2!1sen!2sec!4v1234567890!5m2!1sen!2sec';
+                } else {
+                    name = 'SUCURSAL';
+                    addr = 'HF85+FRJ, Tambillo';
+                    hours = 'Lunes a viernes: 8:00 a 12:20 / 13:30 a 20:00\nSábados: 8:00 a 18:00\nDomingos: horarios irregulares';
+                    map = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.797!2d-78.5!3d-0.2!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x91d59a0b0b0b0b%3A0x0!2zMC4y!5e0!3m2!1sen!2sec!4v1234567890!5m2!1sen!2sec';
+                }
+                state.branches.push({ name, addr, hours, map });
+                localStorage.setItem('afd_b', JSON.stringify(state.branches));
+                renderBranches();
+            }
+        }
+
+        function deleteBranch(i) {
+            state.branches.splice(i, 1);
+            localStorage.setItem('afd_b', JSON.stringify(state.branches));
+            renderBranches();
+        }
+
+        function editBranchMap(i) {
+            const url = prompt("Pegue el link 'src' del iframe de Google Maps:");
+            if(url) {
+                state.branches[i].map = url;
+                localStorage.setItem('afd_b', JSON.stringify(state.branches));
+                renderBranches();
+            }
+        }
+
+        function setMap(url) {
+            const iframe = document.getElementById('map-frame');
+            const placeholder = document.getElementById('map-placeholder');
+            if (url && url.startsWith('https://www.google.com/maps/embed')) {
+                iframe.src = url;
+                iframe.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            } else {
+                iframe.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+        }
+
+        // --- ADMIN & LOGIN ---
+        function toggleLoginModal() { document.getElementById('modal-login').classList.toggle('hidden'); }
+
+        function attemptLogin() {
+            const u = document.getElementById('user').value;
+            const p = document.getElementById('pass').value;
+            const admin = state.admins.find(a => a.user === u && a.pass === p);
+
+            if(admin) {
+                if(admin.first) {
+                    document.getElementById('step-login').classList.add('hidden');
+                    document.getElementById('step-change').classList.remove('hidden');
+                    state.currentLogging = admin.user;
+                } else {
+                    enableAdminMode();
+                }
+            } else { alert("ACCESO DENEGADO"); }
+        }
+
+        function finalizePassChange() {
+            const np = document.getElementById('new-pass').value;
+            if(np.length < 6) return alert("Mínimo 6 caracteres");
+            
+            const idx = state.admins.findIndex(a => a.user === state.currentLogging);
+            state.admins[idx].pass = np;
+            state.admins[idx].first = false;
+            localStorage.setItem('afd_admins', JSON.stringify(state.admins));
+            enableAdminMode();
+        }
+
+        function enableAdminMode() {
+            state.isEdit = true;
+            document.body.classList.add('edit-mode');
+            document.getElementById('login-trigger').classList.add('hidden');
+            document.querySelectorAll('.editable').forEach(el => {
+                el.contentEditable = true;
+                el.classList.add('editable-active');
+            });
+            toggleLoginModal();
+            lucide.createIcons();
+        }
+
+        function exitAdmin() { location.reload(); }
+
+        function saveSession() {
+            const texts = {};
+            document.querySelectorAll('.editable').forEach(el => texts[el.id] = el.innerHTML);
+            localStorage.setItem('afd_texts', JSON.stringify(texts));
+            localStorage.setItem('afd_p', JSON.stringify(state.products));
+            localStorage.setItem('afd_b', JSON.stringify(state.branches));
+            alert("NÚCLEO DE DATOS ACTUALIZADO");
+        }
+
+        function loadGeneralText() {
+            const saved = JSON.parse(localStorage.getItem('afd_texts'));
+            if(saved) {
+                Object.keys(saved).forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.innerHTML = saved[id];
+                });
+            }
+        }
+
+    </script>
+</body>
+</html>
